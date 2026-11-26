@@ -70,6 +70,11 @@ options:
     description:
       - Option to create the password description as a secret and encrypt it in the database. (Optional. Defaults to true.)
     default: True
+  folder_parent_id:
+    type: str
+    required: false
+    description:
+      - UUID of the Passbolt folder where the password should be stored.    
 """
 
 EXAMPLES = """
@@ -117,6 +122,7 @@ def main():
             encrypt_description=dict(type='bool', required=False, default=True),
             fingerprint=dict(type='str', required=False, default=None),
             verify=dict(type='str', required=False, default=True),
+            folder_parent_id=dict(type='str', required=False, default=None),
         ),
         supports_check_mode=True,
     )
@@ -135,20 +141,21 @@ def main():
     encrypt_description = module.params['encrypt_description']
     verify = module.params['verify']
     fingerprint = module.params['fingerprint']
+    folder_parent_id = module.params['folder_parent_id']
 
     if type(verify) is str and verify.lower() in ("true", "false"):
         verify = verify.lower() == "true"
 
     Passbolt = passbolt(apiurl=passbolt_uri, privatekey=gpgkey, passphrase=passphrase, fingerprint=fingerprint,
                         verify=verify)
-    existing_password = Passbolt.getpassword(name, username)
+    existing_password = Passbolt.getpassword(name, username, folder_parent_id=folder_parent_id)
     if existing_password:
         changed = False
         module.exit_json(msg="The resource has been retrieved successfully", changed=changed, password=existing_password[0].__dict__)
     else:
-        response = Passbolt.createpassword(name, password, username, uri, description, encrypt_description)
+        response = Passbolt.createpassword(name, password, username, uri, description, encrypt_description, folder_parent_id=folder_parent_id)
         if response == "The resource has been added successfully.":
-            existing_password = Passbolt.getpassword(name, username)
+            existing_password = Passbolt.getpassword(name, username, folder_parent_id=folder_parent_id)
             changed = True
             module.exit_json(msg=response, changed=changed,password=existing_password[0].__dict__)
         else:
